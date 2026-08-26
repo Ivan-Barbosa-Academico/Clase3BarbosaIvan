@@ -18,5 +18,17 @@ public class Player : MonoBehaviour
         {
             transform.position += Vector3.forward*speed*Time.deltaTime;
         }
+        if (Keyboard.current.sKey.IsPressed())
+        {
+            transform.position += Vector3.back * speed * Time.deltaTime;
+        }
+        if (Keyboard.current.aKey.IsPressed())
+        {
+            transform.position += Vector3.left * speed * Time.deltaTime;
+        }
+        if (Keyboard.current.dKey.IsPressed())
+        {
+            transform.position += Vector3.right * speed * Time.deltaTime;
+        }
     }
 }
