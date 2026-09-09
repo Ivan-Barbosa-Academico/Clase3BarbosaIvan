@@ -1,34 +1,80 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(CharacterController))]
 public class Player : MonoBehaviour
 {
-    public float speed = 10f;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public float speed = 1f;
+    public float gravity = 9.81f;
+    public float groundedGravity = 0.1f;
+
+    [Header("Salto")]
+    public float jumpHeight = 0.50f;
+    public float jumpBufferTime = 0.12f;
+
+    [Header("Control horizontal")]
+    public float groundAcceleration = 20f;
+    public float airAcceleration = 8f;
+    [Range(0f, 1f)]
+    public float airControlFactor = 0.35f;
+
+    private CharacterController controller;
+    private float verticalVelocity = 0f;
+    private Vector3 currentHorizontalVelocity = Vector3.zero;
+    private float jumpBufferCounter = 0f;
+
     void Start()
     {
-        Debug.Log("Hola");
+        controller = GetComponent<CharacterController>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        Debug.Log("Adios");
-        if (Keyboard.current.wKey.IsPressed())
+        // --- INPUT como ejes X/Z (evita escala extra en diagonal) ---
+        float inputX = 0f;
+        float inputZ = 0f;
+        if (Keyboard.current.aKey.isPressed) inputX -= 1f;
+        if (Keyboard.current.dKey.isPressed) inputX += 1f;
+        if (Keyboard.current.sKey.isPressed) inputZ -= 1f;
+        if (Keyboard.current.wKey.isPressed) inputZ += 1f;
+
+        Vector2 inputVec = new Vector2(inputX, inputZ);
+        if (inputVec.sqrMagnitude > 1f) inputVec = inputVec.normalized;
+
+        // Capturar pulsación de salto en buffer
+        if (Keyboard.current.spaceKey.wasPressedThisFrame) jumpBufferCounter = jumpBufferTime;
+        else jumpBufferCounter -= Time.deltaTime;
+
+        // Convertir input 2D a dirección local 3D
+        Vector3 moveDir = transform.right * inputVec.x + transform.forward * inputVec.y;
+
+        // Aplicar factor de control en aire
+        float controlFactor = controller.isGrounded ? 1f : airControlFactor;
+        Vector3 desiredHorizontal = moveDir * speed * controlFactor;
+
+        // Aceleración distinta en suelo/aire
+        float accel = controller.isGrounded ? groundAcceleration : airAcceleration;
+        currentHorizontalVelocity = Vector3.MoveTowards(currentHorizontalVelocity, desiredHorizontal, accel * Time.deltaTime);
+
+        // Salto y gravedad
+        if (controller.isGrounded)
         {
-            transform.position += Vector3.forward*speed*Time.deltaTime;
+            if (jumpBufferCounter > 0f)
+            {
+                verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
+                jumpBufferCounter = 0f;
+            }
+            else
+            {
+                verticalVelocity = -groundedGravity;
+            }
         }
-        if (Keyboard.current.sKey.IsPressed())
+        else
         {
-            transform.position += Vector3.back * speed * Time.deltaTime;
+            verticalVelocity -= gravity * Time.deltaTime;
         }
-        if (Keyboard.current.aKey.IsPressed())
-        {
-            transform.position += Vector3.left * speed * Time.deltaTime;
-        }
-        if (Keyboard.current.dKey.IsPressed())
-        {
-            transform.position += Vector3.right * speed * Time.deltaTime;
-        }
+
+        Vector3 velocity = currentHorizontalVelocity + Vector3.up * verticalVelocity;
+        controller.Move(velocity * Time.deltaTime);
     }
 }
