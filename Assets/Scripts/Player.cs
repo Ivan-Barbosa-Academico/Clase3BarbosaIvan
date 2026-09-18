@@ -5,10 +5,9 @@ using UnityEngine.InputSystem;
 public class Player : MonoBehaviour
 {
     public Transform target;
-    public Camera camera;
+    public new Camera camera;
     public float speed = 5f;
     public float gravity = 9.81f;
-    public float groundedGravity = 0.1f;
 
     [Header("Salto")]
     public float jumpHeight = 2f; // altura objetivo del salto en metros
@@ -23,7 +22,7 @@ public class Player : MonoBehaviour
 
         if (target == null)
         {
-            var player = GameObject.FindWithTag("Amogus");
+            var player = GameObject.FindWithTag("Player");
             if (player != null) target = player.transform;
         }
     }
@@ -63,11 +62,6 @@ public class Player : MonoBehaviour
             if (Keyboard.current.spaceKey.wasPressedThisFrame)
             {
                 verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
-            }
-            else
-            {
-                // pequeña fuerza hacia abajo para mantener contacto con el suelo
-                // verticalVelocity = -groundedGravity;
             }
         }
         else

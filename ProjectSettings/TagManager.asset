@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Amogus
+  - Ground
   layers:
   - Default
   - TransparentFX
