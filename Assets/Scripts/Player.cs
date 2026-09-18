@@ -4,35 +4,33 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class Player : MonoBehaviour
 {
+    public Transform target;
     public Camera camera;
-    public float speed = 1f;
+    public float speed = 5f;
     public float gravity = 9.81f;
     public float groundedGravity = 0.1f;
 
     [Header("Salto")]
-    public float jumpHeight = 1f;
-    public float jumpBufferTime = 0.12f;
-
-    [Header("Control horizontal")]
-    public float groundAcceleration = 20f;
-    public float airAcceleration = 8f;
-    [Range(0f, 1f)]
-    public float airControlFactor = 0.50f;
+    public float jumpHeight = 2f; // altura objetivo del salto en metros
 
     private CharacterController controller;
     private float verticalVelocity = 0f;
-    private Vector3 currentHorizontalVelocity = Vector3.zero;
-    private float jumpBufferCounter = 0f;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
         camera = Camera.main;
+
+        if (target == null)
+        {
+            var player = GameObject.FindWithTag("Amogus");
+            if (player != null) target = player.transform;
+        }
     }
 
-    void FixedUpdate()
+    void Update()
     {
-        // --- INPUT como ejes X/Z (evita escala extra en diagonal) ---
+        // --- INPUT horizontal (ejes X/Z) ---
         float inputX = 0f;
         float inputZ = 0f;
         if (Keyboard.current.aKey.isPressed) inputX -= 1f;
@@ -43,40 +41,42 @@ public class Player : MonoBehaviour
         Vector2 inputVec = new Vector2(inputX, inputZ);
         if (inputVec.sqrMagnitude > 1f) inputVec = inputVec.normalized;
 
-        // Capturar pulsación de salto en buffer
-        if (Keyboard.current.spaceKey.wasPressedThisFrame) jumpBufferCounter = jumpBufferTime;
-        else jumpBufferCounter -= Time.fixedDeltaTime;
+        // Dirección relativa a la cámara (o al transform si no hay cámara)
+        Vector3 moveDir = Vector3.zero;
+        if (camera != null)
+            moveDir = camera.transform.right * inputVec.x + camera.transform.forward * inputVec.y;
+        else
+            moveDir = transform.right * inputVec.x + transform.forward * inputVec.y;
+        moveDir.y = 0f;
 
-        // Convertir input 2D a dirección local 3D
-        Vector3 moveDir = camera.transform.right * inputVec.x + camera.transform.forward * inputVec.y;
-        transform.forward = moveDir;
-        // Aplicar factor de control en aire
-        float controlFactor = controller.isGrounded ? 1f : airControlFactor;
-        Vector3 desiredHorizontal = moveDir * speed * controlFactor;
+        Vector3 horizontal = moveDir * speed;
 
-        // Aceleración distinta en suelo/aire
-        float accel = controller.isGrounded ? groundAcceleration : airAcceleration;
-        currentHorizontalVelocity = Vector3.MoveTowards(currentHorizontalVelocity, desiredHorizontal, accel * Time.fixedDeltaTime);
-
-        // Salto y gravedad
+        if (target != null)
+        {
+            // Rotar el target hacia la dirección de movimiento
+            target.transform.rotation = Quaternion.Euler(0f, camera.transform.rotation.eulerAngles.y, 0f);
+    
+        }
+        // --- SALTO simple: solo si está grounded y se pulsa Space ---
         if (controller.isGrounded)
         {
-            if (jumpBufferCounter > 0f)
+            if (Keyboard.current.spaceKey.wasPressedThisFrame)
             {
                 verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
-                jumpBufferCounter = 0f;
             }
             else
             {
-                verticalVelocity = -groundedGravity;
+                // pequeña fuerza hacia abajo para mantener contacto con el suelo
+                // verticalVelocity = -groundedGravity;
             }
         }
         else
         {
-            verticalVelocity -= gravity * Time.fixedDeltaTime;
+            // en el aire aplicar gravedad
+            verticalVelocity -= gravity * Time.deltaTime;
         }
 
-        Vector3 velocity = currentHorizontalVelocity + Vector3.up * verticalVelocity;
-        controller.Move(velocity * Time.fixedDeltaTime);
+        Vector3 velocity = horizontal + Vector3.up * verticalVelocity;
+        controller.Move(velocity * Time.deltaTime);
     }
 }
