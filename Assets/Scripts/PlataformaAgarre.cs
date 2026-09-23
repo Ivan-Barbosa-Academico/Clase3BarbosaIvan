@@ -99,6 +99,9 @@ public class PlataformasAgarre : MonoBehaviour
             // Quitar parent al salir de la colisión
             if (collision.gameObject.transform.parent == transform)
                 collision.gameObject.transform.SetParent(null);
+
+            float scale = 0.29289f;
+            collision.gameObject.transform.localScale = new Vector3(scale, scale, scale);
         }
     }
 }
